@@ -12,10 +12,13 @@ from base64 import b64encode
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from typing import AsyncIterator
+from typing import Dict
 from typing import Optional
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
+import aiofiles
+import aiofiles.os
 import aiohttp
 import certifi
 import orjson
@@ -28,6 +31,8 @@ from sanic import Sanic
 from sanic import redirect
 
 load_dotenv()
+
+API_CACHE_FILE = "cache_api.json"
 
 REDIS_POOL = redis.ConnectionPool.from_url(
     url=os.environ["REDIS_URL"]
@@ -128,12 +133,12 @@ async def refresh_cache():
                 refreshing = True
 
         if refreshing:
-            await asyncio.sleep(15)
+            await asyncio.sleep(360)
             with app.shared_ctx.cache_refresh_needed.get_lock():
                 app.shared_ctx.cache_refresh_needed.value = True
                 refreshing = False
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(10)
 
 
 # app.add_task(refresh_cache())
@@ -147,14 +152,50 @@ def parse_kv_pairs(s: str) -> dict:
     return dict(word.split("=", maxsplit=1) for word in lexer)
 
 
+async def load_disk_cache(cache_file: str) -> dict:
+    data = {}
+    if cache_file:
+        with app.shared_ctx.file_lock:
+            try:
+                if await aiofiles.os.path.isfile(cache_file):
+                    async with aiofiles.open(cache_file, "rb") as f:
+                        raw = await f.read()
+                        print(f"read {len(raw)} bytes from {cache_file}")
+                        if raw:
+                            data = orjson.loads(raw)
+            except Exception as e:
+                print(f"load_disk_cache error: {e}")
+    return data
+
+
+# TODO: diskcache.
+async def cache_on_disk(data: dict, cache_file: str):
+    if data and cache_file:
+        with app.shared_ctx.file_lock:
+            try:
+                async with aiofiles.open(cache_file, "wb") as f:
+                    await f.write(orjson.dumps(data))
+            except Exception as e:
+                print(f"cache_on_disk error: {e}")
+
+
 class VercelSession:
     def __init__(self) -> None:
         self._resp: Optional[aiohttp.ClientResponse] = None
         self._vercel_route = ""
+        self._cache_file = API_CACHE_FILE
         # TODO: turn this into a dataclass or separate instance variables.
-        self._cached_data: dict[
+        self._cached_data: Dict[
             str,
-            CIMultiDictProxy[str] | bytes | str] = {}
+            Dict[str, CIMultiDictProxy[str] | bytes | str]] = {}
+
+    @property
+    def cached_data(self) -> dict:
+        return self._cached_data
+
+    @cached_data.setter
+    def cached_data(self, data: dict):
+        self._cached_data = data
 
     @asynccontextmanager
     async def get(self, request: Request) -> AsyncIterator[CIMultiDictProxy]:
@@ -167,14 +208,22 @@ class VercelSession:
             None,
         ))
 
-        if await app.ctx.redis.exists(self._vercel_route):
-            headers = self._cached_data.get("headers")
+        # TODO: if not cached in redis
+        #  -> check disk cache
+        #  -> return disk value
+        #  -> schedule vercel api fetch with caching in redis
+        #  -> subsequent queries return redis cached value
+        #     while key is still present in redis
+
+        vr = self._vercel_route
+        if await app.ctx.redis.exists(vr):
+            headers = self._cached_data.get(vr, {}).get("headers")
             if headers:
                 yield headers
                 return
 
         async with app.ctx.aiohttp_session.get(
-                url=self._vercel_route, ssl_context=app.ctx.ssl_context) as resp:
+                url=vr, ssl_context=app.ctx.ssl_context) as resp:
             self._resp = resp
             yield self._resp.headers
 
@@ -185,21 +234,20 @@ class VercelSession:
         vr = self._vercel_route
         if await app.ctx.redis.exists(vr):
             payload_bytes = b""
-            redis_key = self._cached_data.get("redis_key")
-            if redis_key != vr:
+            mem_cached = self._cached_data.get(vr, {})
+            if not mem_cached:
                 cached = await app.ctx.redis.get(vr)
                 if cached:
                     cached_dict = orjson.loads(cached)
                     payload = cached_dict.get("payload", "")
                     if payload:
                         payload_bytes = b64decode(payload)
-                        self._cached_data = {
-                            "redis_key": vr,
+                        self._cached_data[vr] = {
                             "headers": self._resp.headers,
                             "payload": payload_bytes,
                         }
             else:
-                payload_bytes = self._cached_data.get("payload", b"")
+                payload_bytes = self._cached_data.get(vr, {}).get("payload", b"")
 
             if payload_bytes:
                 yield payload_bytes
@@ -210,15 +258,26 @@ class VercelSession:
             chunks += chunk
             yield chunk
 
-        await app.ctx.redis.set(vr, orjson.dumps({
-            "headers": {str(k): str(v) for k, v in self._resp.headers.items()},
-            "payload": b64encode(chunks).decode("utf-8"),
-        }))
-        self._cached_data = {
-            "redis_key": vr,
+        dump_headers = {str(k): str(v) for k, v in self._resp.headers.items()}
+        dump_payload = b64encode(chunks).decode("utf-8")
+        json_dump = orjson.dumps({
+            "headers": dump_headers,
+            "payload": dump_payload,
+        })
+        await app.ctx.redis.set(vr, json_dump)
+
+        self._cached_data[vr] = {
             "headers": self._resp.headers,
             "payload": chunks,
         }
+
+        # TODO: maybe use diskcache instead.
+        await cache_on_disk({
+            vr: {
+                "headers": dump_headers,
+                "payload": dump_payload,
+            }
+        }, cache_file=self._cache_file)
 
         cc = self._resp.headers.get("cache-control")
         if cc:
@@ -264,6 +323,9 @@ async def before_server_start(_app: CustomSanic):
         if not _app.shared_ctx.cache_refresh_needed.value:
             _app.shared_ctx.cache_refresh_needed.value = True
 
+    _app.ctx.vercel_session.cached_data = await load_disk_cache(
+        cache_file=API_CACHE_FILE)
+
 
 @app.after_server_stop
 async def after_server_stop(_app: CustomSanic):
@@ -274,6 +336,7 @@ async def after_server_stop(_app: CustomSanic):
 @app.main_process_start
 async def main_process_start(_app: CustomSanic):
     _app.shared_ctx.cache_refresh_needed = mp.Value(ctypes.c_bool, True)
+    _app.shared_ctx.file_lock = mp.Lock()
 
 
 @app.get("/api/<_endpoint:(.*)>/")
