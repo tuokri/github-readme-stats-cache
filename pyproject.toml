@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
     "aiohttp[speedups]>=3.8.3",
     "certifi>=2022.12.7",
+    "python-dotenv>=0.21.0",
     "redis>=4.4.0",
     "sanic>=22.9.1",
     "uvloop>=0.17.0; platform_system != 'Windows'",
