@@ -133,3 +133,6 @@ dmypy.json
 
 # Hatch
 _version.py
+
+*.gzip
+*.svg
