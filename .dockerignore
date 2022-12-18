@@ -157,3 +157,5 @@ site
 venv\**\*
 
 *.md
+
+cache_api.json
