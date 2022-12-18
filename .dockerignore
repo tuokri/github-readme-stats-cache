@@ -159,3 +159,5 @@ venv\**\*
 *.md
 
 cache_api.json
+
+.cache/

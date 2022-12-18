@@ -26,6 +26,7 @@ dependencies = [
     "aiofiles>=22.1.0",
     "aiohttp[speedups]>=3.8.3",
     "certifi>=2022.12.7",
+    "diskcache>=5.4.0",
     "multidict>=6.0.3",
     "orjson>=3.8.3",
     "python-dotenv>=0.21.0",

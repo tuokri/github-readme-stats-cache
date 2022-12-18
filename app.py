@@ -17,13 +17,13 @@ from typing import Optional
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-import aiofiles
-import aiofiles.os
 import aiohttp
 import certifi
+import diskcache
 import orjson
 import redis.asyncio as redis
 from dotenv import load_dotenv
+from multidict import CIMultiDict
 from multidict import CIMultiDictProxy
 from sanic import HTTPResponse
 from sanic import Request
@@ -32,7 +32,7 @@ from sanic import redirect
 
 load_dotenv()
 
-API_CACHE_FILE = "cache_api.json"
+# API_CACHE_FILE = "cache_api.json"
 
 REDIS_POOL = redis.ConnectionPool.from_url(
     url=os.environ["REDIS_URL"]
@@ -152,38 +152,54 @@ def parse_kv_pairs(s: str) -> dict:
     return dict(word.split("=", maxsplit=1) for word in lexer)
 
 
-async def load_disk_cache(cache_file: str) -> dict:
+# async def load_disk_cache(cache_file: str) -> dict:
+#     data = {}
+#     if cache_file:
+#         with app.shared_ctx.file_lock:
+#             try:
+#                 if await aiofiles.os.path.isfile(cache_file):
+#                     async with aiofiles.open(cache_file, "rb") as f:
+#                         raw = await f.read()
+#                         print(f"read {len(raw)} bytes from {cache_file}")
+#                         if raw:
+#                             data = orjson.loads(raw)
+#             except Exception as e:
+#                 print(f"load_disk_cache error: {e}")
+#     return data
+
+
+def _set_cache(key: str, value: bytes):
+    with app.shared_ctx.cache_lock:
+        app.shared_ctx.cache[key] = value
+
+
+async def set_disk_cache(key: str, value: bytes):
+    future = app.loop.run_in_executor(None, _set_cache, key, value)
+    await future
+
+
+def _get_cache(key: str) -> dict:
     data = {}
-    if cache_file:
-        with app.shared_ctx.file_lock:
-            try:
-                if await aiofiles.os.path.isfile(cache_file):
-                    async with aiofiles.open(cache_file, "rb") as f:
-                        raw = await f.read()
-                        print(f"read {len(raw)} bytes from {cache_file}")
-                        if raw:
-                            data = orjson.loads(raw)
-            except Exception as e:
-                print(f"load_disk_cache error: {e}")
+
+    with app.shared_ctx.cache_lock:
+        data = orjson.loads(app.shared_ctx.cache.get(key))
+
+    if data["headers"]:
+        data["headers"] = CIMultiDict(data["headers"])
+
     return data
 
 
-# TODO: diskcache.
-async def cache_on_disk(data: dict, cache_file: str):
-    if data and cache_file:
-        with app.shared_ctx.file_lock:
-            try:
-                async with aiofiles.open(cache_file, "wb") as f:
-                    await f.write(orjson.dumps(data))
-            except Exception as e:
-                print(f"cache_on_disk error: {e}")
+async def get_disk_cache(key: str) -> dict:
+    future = app.loop.run_in_executor(None, _get_cache, key)
+    return await future
 
 
 class VercelSession:
     def __init__(self) -> None:
         self._resp: Optional[aiohttp.ClientResponse] = None
         self._vercel_route = ""
-        self._cache_file = API_CACHE_FILE
+        # self._cache_file = API_CACHE_FILE
         # TODO: turn this into a dataclass or separate instance variables.
         self._cached_data: Dict[
             str,
@@ -222,15 +238,20 @@ class VercelSession:
                 yield headers
                 return
 
+        disk_cached = await get_disk_cache(vr)
+        if disk_cached:
+            headers = disk_cached.get("headers")
+            if headers:
+                yield headers
+                # schedule vercel refresh
+                return
+
         async with app.ctx.aiohttp_session.get(
                 url=vr, ssl_context=app.ctx.ssl_context) as resp:
             self._resp = resp
             yield self._resp.headers
 
     async def iter_chunked(self, n: int = 4096) -> AsyncIterator[bytes]:
-        if not self._resp:
-            raise RuntimeError("cannot iterate chunks before get is performed")
-
         vr = self._vercel_route
         if await app.ctx.redis.exists(vr):
             payload_bytes = b""
@@ -252,6 +273,14 @@ class VercelSession:
             if payload_bytes:
                 yield payload_bytes
                 return
+        else:
+            disk_cached = await get_disk_cache(vr)
+            if disk_cached:
+                payload_bytes = disk_cached.get("payload", b"")
+                if payload_bytes:
+                    yield b64decode(payload_bytes)
+                    # schedule vercel refresh
+                    return
 
         chunks = b""
         async for chunk in self._resp.content.iter_chunked(n):
@@ -271,13 +300,7 @@ class VercelSession:
             "payload": chunks,
         }
 
-        # TODO: maybe use diskcache instead.
-        await cache_on_disk({
-            vr: {
-                "headers": dump_headers,
-                "payload": dump_payload,
-            }
-        }, cache_file=self._cache_file)
+        await set_disk_cache(key=vr, value=json_dump)
 
         cc = self._resp.headers.get("cache-control")
         if cc:
@@ -323,8 +346,8 @@ async def before_server_start(_app: CustomSanic):
         if not _app.shared_ctx.cache_refresh_needed.value:
             _app.shared_ctx.cache_refresh_needed.value = True
 
-    _app.ctx.vercel_session.cached_data = await load_disk_cache(
-        cache_file=API_CACHE_FILE)
+    # _app.ctx.vercel_session.cached_data = await load_disk_cache(
+    #     cache_file=API_CACHE_FILE)
 
 
 @app.after_server_stop
@@ -336,7 +359,14 @@ async def after_server_stop(_app: CustomSanic):
 @app.main_process_start
 async def main_process_start(_app: CustomSanic):
     _app.shared_ctx.cache_refresh_needed = mp.Value(ctypes.c_bool, True)
-    _app.shared_ctx.file_lock = mp.Lock()
+    _app.shared_ctx.cache = diskcache.Cache(
+        directory="./.cache/",
+        size_limit=178956970,  # ~0.167 GiB
+    )
+    _app.shared_ctx.cache_lock = diskcache.RLock(
+        cache=_app.shared_ctx.cache,
+        key="rlock",
+    )
 
 
 @app.get("/api/<_endpoint:(.*)>/")
