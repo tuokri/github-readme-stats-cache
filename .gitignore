@@ -136,3 +136,5 @@ _version.py
 
 *.gzip
 *.svg
+
+requirements.txt
