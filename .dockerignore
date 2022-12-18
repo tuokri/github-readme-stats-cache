@@ -155,3 +155,5 @@ site
 # flyctl launch added from venv\.gitignore
 # created by virtualenv automatically
 venv\**\*
+
+*.md
