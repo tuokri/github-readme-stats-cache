@@ -5,6 +5,7 @@ import os
 import random
 import shlex
 import ssl
+import sys
 import urllib.parse
 from base64 import b64decode
 from base64 import b64encode
@@ -21,16 +22,15 @@ import orjson
 import redis.asyncio as redis
 from dotenv import load_dotenv
 from multidict import CIMultiDictProxy
+from sanic import HTTPResponse
 from sanic import Request
 from sanic import Sanic
+from sanic import redirect
 
 load_dotenv()
 
-REDIS_POOL = redis.ConnectionPool(
-    host=os.environ["REDIS_HOST"],
-    port=int(os.environ["REDIS_PORT"]),
-    username=os.environ["REDIS_USERNAME"],
-    password=os.environ["REDIS_PASSWORD"],
+REDIS_POOL = redis.ConnectionPool.from_url(
+    url=os.environ["REDIS_URL"]
 )
 
 
@@ -103,7 +103,11 @@ app = CustomSanic(
 
 
 async def refresh_cache():
-    """TODO: this isn't actually needed it seems..."""
+    """TODO: refresh evicted keys from Vercel. Maybe store them longer in
+             Redis than what Vercel cache max-age is? Just return the cached
+             copy and trigger a new fetch from Vercel so the next request
+             will return the newest version?
+    """
     refreshing = False
 
     # Should probably wait her for all workers to initialize
@@ -282,5 +286,11 @@ async def api_root(request: Request):
     await vercel_get(request)
 
 
+@app.get("/")
+async def root(*_) -> HTTPResponse:
+    return redirect("https://github.com/tuokri/github-readme-stats-cache")
+
+
 if __name__ == "__main__":
+    print(sys.version)
     app.run(debug=True, dev=True, workers=4)
