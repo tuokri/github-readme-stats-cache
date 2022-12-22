@@ -106,6 +106,15 @@ app = CustomSanic(
     ),
 )
 
+app.ctx.cache = diskcache.Cache(
+    directory="./.diskcache/",
+    size_limit=178956970,  # ~0.167 GiB
+)
+app.ctx.cache_lock = diskcache.RLock(
+    cache=app.ctx.cache,
+    key="rlock",
+)
+
 
 async def refresh_cache():
     """TODO: refresh evicted keys from Vercel. Maybe store them longer in
@@ -169,8 +178,8 @@ def parse_kv_pairs(s: str) -> dict:
 
 
 def _set_cache(key: str, value: bytes):
-    with app.shared_ctx.cache_lock:
-        app.shared_ctx.cache[key] = value
+    with app.ctx.cache_lock:
+        app.ctx.cache[key] = value
 
 
 async def set_disk_cache(key: str, value: bytes):
@@ -181,10 +190,13 @@ async def set_disk_cache(key: str, value: bytes):
 def _get_cache(key: str) -> dict:
     data = {}
 
-    with app.shared_ctx.cache_lock:
-        data = orjson.loads(app.shared_ctx.cache.get(key))
+    with app.ctx.cache_lock:
+        cached = app.ctx.cache.get(key)
 
-    if data["headers"]:
+    if cached:
+        data = orjson.loads(cached)
+
+    if "headers" in data:
         data["headers"] = CIMultiDict(data["headers"])
 
     return data
@@ -253,8 +265,9 @@ class VercelSession:
 
     async def iter_chunked(self, n: int = 4096) -> AsyncIterator[bytes]:
         vr = self._vercel_route
-        if await app.ctx.redis.exists(vr):
+        if self._resp and await app.ctx.redis.exists(vr):
             payload_bytes = b""
+            # TODO: think about this memory caching... Could grow indefinitely.
             mem_cached = self._cached_data.get(vr, {})
             if not mem_cached:
                 cached = await app.ctx.redis.get(vr)
@@ -359,14 +372,6 @@ async def after_server_stop(_app: CustomSanic):
 @app.main_process_start
 async def main_process_start(_app: CustomSanic):
     _app.shared_ctx.cache_refresh_needed = mp.Value(ctypes.c_bool, True)
-    _app.shared_ctx.cache = diskcache.Cache(
-        directory="./.cache/",
-        size_limit=178956970,  # ~0.167 GiB
-    )
-    _app.shared_ctx.cache_lock = diskcache.RLock(
-        cache=_app.shared_ctx.cache,
-        key="rlock",
-    )
 
 
 @app.get("/api/<_endpoint:(.*)>/")

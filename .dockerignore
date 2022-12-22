@@ -160,4 +160,4 @@ venv\**\*
 
 cache_api.json
 
-.cache/
+.diskcache\
