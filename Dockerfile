@@ -14,11 +14,13 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+# --checksum=sha256:d6a715c0810ceb39c94bf61843befebe04a83a0469b53d6af0a52e2fea4e2ab3 \
 ADD https://github.com/DarthSim/overmind/releases/download/v2.3.0/overmind-v2.3.0-linux-amd64.gz \
- overmind-v2.3.0-linux-amd64.gz
-RUN chmod +x overmind-v2.3.0-linux-amd64/overmind-v2.3.0-linux-amd64
-RUN mv overmind-v2.3.0-linux-amd64/overmind-v2.3.0-linux-amd64 /usr/local/bin/
-RUN ln -s /usr/local/bin/overmind-v2.3.0-linux-amd64 /usr/bin/overmind
+    ./
+RUN gzip -fd ./overmind-v2.3.0-linux-amd64.gz
+RUN mv ./overmind-v2.3.0-linux-amd64 ./overmind
+RUN chmod +x ./overmind
+RUN mv ./overmind /usr/local/bin/
 
 EXPOSE 8080
 

@@ -24,6 +24,7 @@ classifiers = [
 dependencies = [
     "aiofiles==22.1.0",
     "aiohttp[speedups]==3.8.3",
+    "celery==5.2.7",
     "certifi==2022.12.7",
     "diskcache==5.4.0",
     "multidict==6.0.3",
