@@ -14,8 +14,12 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+ADD https://github.com/DarthSim/overmind/releases/download/v2.3.0/overmind-v2.3.0-linux-amd64.gz \
+ overmind-v2.3.0-linux-amd64.gz
+RUN chmod +x overmind-v2.3.0-linux-amd64/overmind-v2.3.0-linux-amd64
+RUN mv overmind-v2.3.0-linux-amd64/overmind-v2.3.0-linux-amd64 /usr/local/bin/
+RUN ln -s /usr/local/bin/overmind-v2.3.0-linux-amd64 /usr/bin/overmind
+
 EXPOSE 8080
 
-
-
-CMD ["sanic", "app.app", "--host=0.0.0.0", "--port=8080", "--workers=4", "--access-log"]
+CMD ["overmind", "start"]
