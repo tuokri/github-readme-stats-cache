@@ -138,3 +138,5 @@ _version.py
 *.svg
 
 requirements.txt
+
+.diskcache/
