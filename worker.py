@@ -20,7 +20,7 @@ load_dotenv()
 app = celery.Celery(
     "worker",
     broker=os.environ["REDIS_URL"],
-    backend=os.environ["REDIS_URL"],
+    # backend=os.environ["REDIS_URL"],
 )
 redis = redis.StrictRedis(os.environ["REDIS_URL"])
 cache = DISK_CACHE
