@@ -8,6 +8,7 @@ import celery
 import orjson
 import redis
 import requests
+from celery import Task
 from dotenv import load_dotenv
 
 from cache import CACHE_LOCK
@@ -16,10 +17,24 @@ from utils import parse_kv_pairs
 
 load_dotenv()
 
-app = celery.Celery("tasks", broker=os.environ["REDIS_URL"])
+app = celery.Celery(
+    "worker",
+    broker=os.environ["REDIS_URL"],
+    backend=os.environ["REDIS_URL"],
+)
 redis = redis.StrictRedis(os.environ["REDIS_URL"])
 cache = DISK_CACHE
 cache_lock = CACHE_LOCK
+
+
+class BaseTask(Task):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        x = redis.ping()
+        print(f"{redis}: ping response: {x}")
+
+    def run(self, *args, **kwargs):
+        super().run(*args, **kwargs)
 
 
 def set_redis(key: str, value: bytes, ttl: int):
@@ -40,7 +55,7 @@ def set_cache(key: str, value: bytes):
         print_exc()
 
 
-@app.task
+@app.task(base=BaseTask)
 def do_vercel_get(vercel_url: str, vercel_route: str):
     vercel_url_parts = urlparse(vercel_url)
     vercel_route_parts = urlparse(vercel_route)

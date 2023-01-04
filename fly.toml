@@ -7,7 +7,7 @@ processes = []
 
 [mounts]
 source="data"
-destination="/data"
+destination="/data/"
 
 [env]
 

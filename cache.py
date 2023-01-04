@@ -4,7 +4,7 @@ import diskcache
 
 # Production deployment.
 if "FLY_APP_NAME" in os.environ:
-    DISKCACHE_DIR = "/data/.diskcache/"
+    DISKCACHE_DIR = os.environ["DISKCACHE_DIR"]
 else:
     DISKCACHE_DIR = "./.diskcache/"
 

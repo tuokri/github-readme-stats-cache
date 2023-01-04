@@ -16,7 +16,6 @@ import aiohttp
 import certifi
 import orjson
 import redis.asyncio as redis
-import redis.exceptions
 from dotenv import load_dotenv
 from multidict import CIMultiDict
 from multidict import CIMultiDictProxy
@@ -33,9 +32,10 @@ from worker import do_vercel_get
 
 load_dotenv()
 
-REDIS_POOL = redis.ConnectionPool.from_url(
-    url=os.environ["REDIS_URL"]
-)
+
+# REDIS_POOL = redis.ConnectionPool.from_url(
+#     url=os.environ["REDIS_URL"]
+# )
 
 
 class AppContext(SimpleNamespace):
@@ -190,7 +190,7 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
 
             await app.ctx.redis.expire(self._vercel_route, ttl)
 
-        except redis.exceptions.ConnectionError as ce:
+        except redis.ConnectionError as ce:
             logger.error("error setting redis data: %s: %s",
                          type(ce).__name__, ce, exc_info=False)
 
@@ -199,9 +199,9 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
             redis_data = await app.ctx.redis.get(self._vercel_route)
             if redis_data:
                 redis_dict = orjson.loads(redis_data)
-                self._headers = redis_dict.get("headers")
+                self._headers = CIMultiDict(redis_dict.get("headers"))
                 self._payload = b64decode(redis_dict.get("payload"))
-        except redis.exceptions.ConnectionError as ce:
+        except redis.ConnectionError as ce:
             logger.error("error getting redis data: %s: %s",
                          type(ce).__name__, ce)
 
@@ -216,7 +216,7 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
         try:
             disk_data = await get_disk_cache(self._vercel_route)
             if disk_data:
-                self._headers = disk_data.get("headers")
+                self._headers = CIMultiDict(disk_data.get("headers"))
                 self._payload = b64decode(disk_data.get("payload"))
         except Exception as e:
             logger.info("error setting diskcache data: %s: %s",
@@ -226,7 +226,7 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
         async with app.ctx.aiohttp_session.get(
                 url=self._vercel_route,
                 ssl_context=app.ctx.ssl_context) as resp:
-            self._headers = resp.headers
+            self._headers = resp.headers.copy()
             self._payload = b""
             async for chunk in resp.content.iter_chunked(4096):
                 self._payload += chunk
@@ -288,12 +288,15 @@ async def before_server_start(_app: CustomSanic):
     )
 
     _app.ctx.redis = redis.StrictRedis(
-        connection_pool=REDIS_POOL,
-    )
+        # connection_pool=REDIS_POOL,
+    ).from_url(os.environ["REDIS_URL"])
+    logger.info("created redis instance: %s", _app.ctx.redis)
+
     try:
         await _app.ctx.redis.ping()
     except Exception as e:
-        print(f"error connecting to redis: {e}")
+        logger.error(f"error connecting to redis: %s", e)
+        logger.exception(e)
 
 
 # noinspection PyBroadException
@@ -313,7 +316,6 @@ async def after_server_stop(_app: CustomSanic):
 async def api_endpoint(request: Request, _endpoint: str) -> HTTPResponse:
     try:
         await vercel_get(request)
-        # return HTTPResponse(status=200)
     except PermissionError:
         return HTTPResponse(status=400)
 
@@ -322,7 +324,6 @@ async def api_endpoint(request: Request, _endpoint: str) -> HTTPResponse:
 async def api_root(request: Request) -> HTTPResponse:
     try:
         await vercel_get(request)
-        # return HTTPResponse(status=200)
     except PermissionError:
         return HTTPResponse(status=400)
 
@@ -333,8 +334,9 @@ async def root(*_) -> HTTPResponse:
 
 
 @app.exception
-async def on_exception(_, exc: Exception) -> HTTPResponse:
-    logger.error("%s: %s", type(exc).__name__, exc)
+async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
+    logger.error("error on request:%s: %s: %s", request, type(exc).__name__, exc)
+    logger.exception()
     return HTTPResponse(status=500)
 
 
