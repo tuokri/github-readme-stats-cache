@@ -27,7 +27,7 @@ dependencies = [
     "celery==5.2.7",
     "certifi==2022.12.7",
     "diskcache==5.4.0",
-    "multidict==6.0.3",
+    "multidict==6.0.4",
     "orjson==3.8.3",
     "python-dotenv==0.21.0",
     "redis==4.4.0",
