@@ -2,9 +2,7 @@
 
 set -x
 
-pwd
-ls -lah
-ls -lah /data/
-whoami
+export OVERMIND_CAN_DIE=celery
+export OVERMIND_AUTO_RESTART=celery
 
 overmind start

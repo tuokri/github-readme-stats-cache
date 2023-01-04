@@ -3,6 +3,7 @@ FROM python:3.11-slim-bullseye
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && apt-get install -y \
+    dos2unix \
     libsqlite3-dev  \
     tmux \
     && rm -rf /var/lib/apt/lists/*
@@ -31,5 +32,7 @@ USER overmind_user
 WORKDIR /home/overmind_user/
 
 COPY --chown=overmind_user:overmind_user ./ /home/overmind_user/
+
+RUN dos2unix ./*
 
 ENTRYPOINT ["bash", "run.sh"]

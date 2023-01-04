@@ -17,9 +17,13 @@ from utils import parse_kv_pairs
 
 load_dotenv()
 
+REDIS_URL = os.environ["REDIS_URL"]
+x = urlparse(REDIS_URL)
+REDIS_URL = urlunparse(x._replace(path="/0"))
+
 app = celery.Celery(
     "worker",
-    broker=os.environ["REDIS_URL"],
+    broker=REDIS_URL,
     # backend=os.environ["REDIS_URL"],
 )
 redis = redis.StrictRedis(os.environ["REDIS_URL"])
