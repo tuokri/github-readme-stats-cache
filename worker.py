@@ -1,4 +1,5 @@
 import os
+import traceback
 from base64 import b64encode
 from traceback import print_exc
 from urllib.parse import urlparse
@@ -18,15 +19,15 @@ from utils import parse_kv_pairs
 load_dotenv()
 
 REDIS_URL = os.environ["REDIS_URL"]
-x = urlparse(REDIS_URL)
-REDIS_URL = urlunparse(x._replace(path="/0"))
 
 app = celery.Celery(
     "worker",
     broker=REDIS_URL,
-    # backend=os.environ["REDIS_URL"],
+    backend=REDIS_URL,
 )
-redis = redis.StrictRedis(os.environ["REDIS_URL"])
+
+redis_instance = redis.StrictRedis(REDIS_URL)
+
 cache = DISK_CACHE
 cache_lock = CACHE_LOCK
 
@@ -34,8 +35,12 @@ cache_lock = CACHE_LOCK
 class BaseTask(Task):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        x = redis.ping()
-        print(f"{redis}: ping response: {x}")
+        try:
+            resp = redis_instance.ping()
+            print(f"{redis}: ping response: {resp}")
+        except Exception as e:
+            print(f"error connecting to redis: {e}")
+            traceback.print_exception(e)
 
     def run(self, *args, **kwargs):
         super().run(*args, **kwargs)
@@ -44,8 +49,8 @@ class BaseTask(Task):
 def set_redis(key: str, value: bytes, ttl: int):
     # noinspection PyBroadException
     try:
-        redis.set(key, value)
-        redis.expire(key, ttl)
+        redis_instance.set(key, value)
+        redis_instance.expire(key, ttl)
     except Exception:
         print_exc()
 
