@@ -35,6 +35,7 @@ from worker import do_vercel_get
 load_dotenv()
 
 DISKCACHE_VERSION_KEY = "cache_version"
+REDIS_FLUSHED_RECENTLY_KEY = "redis_flushed_recently"
 
 
 class AppContext(SimpleNamespace):
@@ -300,7 +301,11 @@ async def flush_redis():
             await asyncio.sleep(0.2)
             retries += 1
 
-    await redis_.flushdb(asynchronous=True)
+    if not await redis_.get(REDIS_FLUSHED_RECENTLY_KEY):
+        logger.info("flushing redis")
+        await redis_.set(REDIS_FLUSHED_RECENTLY_KEY, True)
+        await redis_.expire(REDIS_FLUSHED_RECENTLY_KEY, 30)
+        await redis_.flushdb(asynchronous=True)
 
 
 @app.before_server_start
@@ -373,8 +378,8 @@ async def main_process_start(*_):
         logger.info("version changed, clearing cache")
         app.ctx.cache.clear(retry=True)
         app.ctx.cache.set(DISKCACHE_VERSION_KEY, __version__)
-        t = app.add_task(flush_redis())
-        logger.info("added redis flush task: %s", t)
+        # noinspection PyTypeChecker,PyAsyncCall
+        app.add_task(flush_redis)
 
 
 if __name__ == "__main__":
