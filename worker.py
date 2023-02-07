@@ -19,6 +19,7 @@ from utils import parse_kv_pairs
 
 load_dotenv()
 
+REDIS_FLUSHED_RECENTLY_KEY = "redis_flushed_recently"
 REDIS_URL = os.environ["REDIS_URL"]
 
 app = celery.Celery(
@@ -117,3 +118,12 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
         except ValueError:
             pass
     set_redis(key, json_dump, ttl)
+
+
+@app.task(base=BaseTask)
+def flush_redis():
+    if not redis_instance.get(REDIS_FLUSHED_RECENTLY_KEY):
+        print("flushing redis")
+        redis_instance.set(REDIS_FLUSHED_RECENTLY_KEY, True)
+        redis_instance.expire(REDIS_FLUSHED_RECENTLY_KEY, 30)
+        redis_instance.flushdb(asynchronous=True)

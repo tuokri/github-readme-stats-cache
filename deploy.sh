@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-hatch version
+hatch build
 hatch dep show requirements >requirements.txt
 flyctl deploy --verbose --region ams --push --now

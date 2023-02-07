@@ -1,4 +1,3 @@
-import asyncio
 import os
 import ssl
 import urllib.parse
@@ -31,11 +30,11 @@ from cache import CACHE_LOCK
 from cache import DISK_CACHE
 from utils import parse_kv_pairs
 from worker import do_vercel_get
+from worker import flush_redis
 
 load_dotenv()
 
 DISKCACHE_VERSION_KEY = "cache_version"
-REDIS_FLUSHED_RECENTLY_KEY = "redis_flushed_recently"
 
 
 class AppContext(SimpleNamespace):
@@ -284,30 +283,6 @@ async def vercel_get(request: Request):
             await response.send(data)
 
 
-async def flush_redis():
-    redis_ = None
-    retries = 0
-    max_retries = 50
-    while not redis_:
-        try:
-            redis_ = app.ctx.redis
-        except ValueError:
-            if retries > max_retries:
-                logger.error("failed to flush redis cache, "
-                             "max retries exceeded")
-                return
-
-            logger.info("redis instance not set yet, retrying...")
-            await asyncio.sleep(0.2)
-            retries += 1
-
-    if not await redis_.get(REDIS_FLUSHED_RECENTLY_KEY):
-        logger.info("flushing redis")
-        await redis_.set(REDIS_FLUSHED_RECENTLY_KEY, True)
-        await redis_.expire(REDIS_FLUSHED_RECENTLY_KEY, 30)
-        await redis_.flushdb(asynchronous=True)
-
-
 @app.before_server_start
 async def before_server_start(_app: CustomSanic):
     _app.ctx.aiohttp_session = aiohttp.ClientSession(
@@ -379,7 +354,7 @@ async def main_process_start(*_):
         app.ctx.cache.clear(retry=True)
         app.ctx.cache.set(DISKCACHE_VERSION_KEY, __version__)
         # noinspection PyTypeChecker,PyAsyncCall
-        app.add_task(flush_redis)
+        flush_redis.delay()
 
 
 if __name__ == "__main__":
