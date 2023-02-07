@@ -29,7 +29,7 @@ dependencies = [
     "diskcache==5.4.0",
     "multidict==6.0.4",
     "orjson==3.8.5",
-    "python-dotenv==0.21.0",
+    "python-dotenv==0.21.1",
     "redis==4.4.2",
     "requests==2.28.2",
     "sanic-ext==22.12.0",
