@@ -124,6 +124,6 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
 def flush_redis():
     if not redis_instance.get(REDIS_FLUSHED_RECENTLY_KEY):
         print("flushing redis")
-        redis_instance.set(REDIS_FLUSHED_RECENTLY_KEY, True)
+        redis_instance.set(REDIS_FLUSHED_RECENTLY_KEY, 1)
         redis_instance.expire(REDIS_FLUSHED_RECENTLY_KEY, 30)
         redis_instance.flushdb(asynchronous=True)
