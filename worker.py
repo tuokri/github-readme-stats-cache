@@ -1,6 +1,7 @@
 import os
 import traceback
 from base64 import b64encode
+from pprint import pformat
 from traceback import print_exc
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
@@ -84,9 +85,9 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
 
     resp = requests.get(url, timeout=30, stream=True)
     headers = resp.headers
-    data = b""
-    for chunk in resp.iter_content(chunk_size=4096):
-        data += chunk
+    data: bytes = resp.raw()
+
+    print(f"do_vercel_get headers: {pformat(headers)}")
 
     dump_headers = {str(k): str(v) for k, v in headers.items()}
     dump_payload = b64encode(data).decode("utf-8")

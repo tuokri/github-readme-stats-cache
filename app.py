@@ -1,9 +1,11 @@
+import asyncio
 import os
 import ssl
 import urllib.parse
 from base64 import b64decode
 from base64 import b64encode
 from contextlib import AbstractAsyncContextManager
+from pprint import pformat
 from types import SimpleNamespace
 from types import TracebackType
 from typing import AsyncIterator
@@ -32,10 +34,7 @@ from worker import do_vercel_get
 
 load_dotenv()
 
-
-# REDIS_POOL = redis.ConnectionPool.from_url(
-#     url=os.environ["REDIS_URL"]
-# )
+DISKCACHE_VERSION_KEY = "cache_version"
 
 
 class AppContext(SimpleNamespace):
@@ -72,7 +71,7 @@ class AppContext(SimpleNamespace):
     @property
     def redis(self) -> "redis.Redis":
         if not self._redis:
-            raise RuntimeError("redis not instance not set")
+            raise ValueError("redis not instance not set")
         return self._redis
 
     @redis.setter
@@ -139,7 +138,8 @@ async def _do_vercel_get(vercel_url: str, vercel_route: str):
 
 
 async def _schedule_vercel_get_task(vercel_url: str, vercel_route: str):
-    await app.add_task(_do_vercel_get(vercel_url, vercel_route))
+    t = app.add_task(_do_vercel_get(vercel_url, vercel_route))
+    logger.info("added task %s", t)
 
 
 class VercelSession(AbstractAsyncContextManager["VercelSession"]):
@@ -227,6 +227,9 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
                 url=self._vercel_route,
                 ssl_context=app.ctx.ssl_context) as resp:
             self._headers = resp.headers.copy()
+
+            print(f"_vercel_get headers: {pformat(self._headers)}")
+
             self._payload = b""
             async for chunk in resp.content.iter_chunked(4096):
                 self._payload += chunk
@@ -278,6 +281,26 @@ async def vercel_get(request: Request):
         )
         async for data in vs.iter_chunked():
             await response.send(data)
+
+
+async def flush_redis():
+    redis_ = None
+    retries = 0
+    max_retries = 50
+    while not redis_:
+        try:
+            redis_ = app.ctx.redis
+        except ValueError:
+            if retries > max_retries:
+                logger.error("failed to flush redis cache, "
+                             "max retries exceeded")
+                return
+
+            logger.info("redis instance not set yet, retrying...")
+            await asyncio.sleep(0.2)
+            retries += 1
+
+    await redis_.flushdb(asynchronous=True)
 
 
 @app.before_server_start
@@ -338,6 +361,20 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
     logger.error("error on request:%s: %s: %s", request, type(exc).__name__, exc)
     logger.exception()
     return HTTPResponse(status=500)
+
+
+@app.main_process_start
+async def main_process_start(*_):
+    from _version import __version__
+    cache_version = app.ctx.cache.get(DISKCACHE_VERSION_KEY)
+    logger.info("cache_version: %s", cache_version)
+    logger.info("__version__: %s", __version__)
+    if cache_version != __version__:
+        logger.info("version changed, clearing cache")
+        app.ctx.cache.clear(retry=True)
+        app.ctx.cache.set(DISKCACHE_VERSION_KEY, __version__)
+        t = app.add_task(flush_redis())
+        logger.info("added redis flush task: %s", t)
 
 
 if __name__ == "__main__":

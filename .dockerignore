@@ -132,9 +132,6 @@ site
 # JetBrains
 **\.idea
 
-# Hatch
-**\_version.py
-
 **\*.gzip
 **\*.svg
 
