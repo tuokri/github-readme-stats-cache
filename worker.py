@@ -26,7 +26,7 @@ app = celery.Celery(
     backend=REDIS_URL,
 )
 
-redis_instance = redis.StrictRedis(REDIS_URL)
+redis_instance = redis.StrictRedis.from_url(REDIS_URL)
 
 cache = DISK_CACHE
 cache_lock = CACHE_LOCK
@@ -49,8 +49,11 @@ class BaseTask(Task):
 def set_redis(key: str, value: bytes, ttl: int):
     # noinspection PyBroadException
     try:
-        redis_instance.set(key, value)
-        redis_instance.expire(key, ttl)
+        print(f"set_redis: key={key}")
+        resp = redis_instance.set(key, value)
+        print(f"redis set: {resp}")
+        resp = redis_instance.expire(key, ttl)
+        print(f"redis expire: {resp}")
     except Exception:
         print_exc()
 
@@ -59,6 +62,7 @@ def set_cache(key: str, value: bytes):
     # noinspection PyBroadException
     try:
         with cache_lock:
+            print(f"set_cache: key={key}")
             cache.set(key, value)
     except Exception:
         print_exc()
@@ -81,7 +85,7 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
     resp = requests.get(url, timeout=30, stream=True)
     headers = resp.headers
     data = b""
-    for chunk in resp.iter_content():
+    for chunk in resp.iter_content(chunk_size=4096):
         data += chunk
 
     dump_headers = {str(k): str(v) for k, v in headers.items()}
@@ -91,7 +95,17 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
         "payload": dump_payload,
     })
 
-    set_cache(url, json_dump)
+    url_parts = urlparse(url)
+    key = urlunparse((
+        "",
+        "",
+        url_parts.path,
+        None,
+        url_parts.query,
+        None,
+    ))
+
+    set_cache(key, json_dump)
 
     ttl = 7500
     cc = headers.get("cache-control")
@@ -101,4 +115,4 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
             ttl = int(kvs.get("max-age", 7500))
         except ValueError:
             pass
-    set_redis(url, json_dump, ttl)
+    set_redis(key, json_dump, ttl)
