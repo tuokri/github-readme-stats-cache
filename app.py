@@ -352,7 +352,6 @@ async def main_process_start(*_):
         logger.info("version changed, clearing cache")
         app.ctx.cache.clear(retry=True)
         app.ctx.cache.set(DISKCACHE_VERSION_KEY, __version__)
-        # noinspection PyTypeChecker,PyAsyncCall
         flush_redis.delay()
 
 
