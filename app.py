@@ -350,9 +350,9 @@ async def main_process_start(*_):
     logger.info("__version__: %s", __version__)
     if cache_version != __version__:
         logger.info("version changed, clearing cache")
+        flush_redis.delay()
         app.ctx.cache.clear(retry=True)
         app.ctx.cache.set(DISKCACHE_VERSION_KEY, __version__)
-        flush_redis.delay()
 
 
 if __name__ == "__main__":
