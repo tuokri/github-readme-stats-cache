@@ -1,7 +1,6 @@
 import os
 import traceback
 from base64 import b64encode
-from pprint import pformat
 from traceback import print_exc
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
@@ -10,6 +9,7 @@ import celery
 import orjson
 import redis
 import requests
+import urllib3
 from celery import Task
 from dotenv import load_dotenv
 
@@ -51,11 +51,11 @@ class BaseTask(Task):
 def set_redis(key: str, value: bytes, ttl: int):
     # noinspection PyBroadException
     try:
-        print(f"set_redis: key={key}")
+        # print(f"set_redis: key={key}")
         resp = redis_instance.set(key, value)
-        print(f"redis set: {resp}")
+        # print(f"redis set: {resp}")
         resp = redis_instance.expire(key, ttl)
-        print(f"redis expire: {resp}")
+        # print(f"redis expire: {resp}")
     except Exception:
         print_exc()
 
@@ -64,7 +64,7 @@ def set_cache(key: str, value: bytes):
     # noinspection PyBroadException
     try:
         with cache_lock:
-            print(f"set_cache: key={key}")
+            # print(f"set_cache: key={key}")
             cache.set(key, value)
     except Exception:
         print_exc()
@@ -86,9 +86,12 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
 
     resp = requests.get(url, timeout=30, stream=True)
     headers = resp.headers
-    data: bytes = resp.raw()
+    raw_response: urllib3.HTTPResponse = resp.raw
+    data: bytes = b""
+    for stream_bytes in raw_response.stream(1024, decode_content=False):
+        data += stream_bytes
 
-    print(f"do_vercel_get headers: {pformat(headers)}")
+    # print(f"do_vercel_get headers: {pformat(headers)}")
 
     dump_headers = {str(k): str(v) for k, v in headers.items()}
     dump_payload = b64encode(data).decode("utf-8")

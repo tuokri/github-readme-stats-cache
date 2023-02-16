@@ -4,7 +4,6 @@ import urllib.parse
 from base64 import b64decode
 from base64 import b64encode
 from contextlib import AbstractAsyncContextManager
-from pprint import pformat
 from types import SimpleNamespace
 from types import TracebackType
 from typing import AsyncIterator
@@ -228,7 +227,7 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
                 ssl_context=app.ctx.ssl_context) as resp:
             self._headers = resp.headers.copy()
 
-            print(f"_vercel_get headers: {pformat(self._headers)}")
+            # print(f"_vercel_get headers: {pformat(self._headers)}")
 
             self._payload = b""
             async for chunk in resp.content.iter_chunked(4096):

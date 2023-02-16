@@ -5,3 +5,5 @@ Sanic app that caches responses from my
 fork deployed on Vercel. When GitHub Readme Stats is deployed with free Vercel
 plan, it seems to timeout sometimes, causing broken images in my
 GitHub profile.
+
+TODO: GitHub action to purge camo image cache on deployment.
