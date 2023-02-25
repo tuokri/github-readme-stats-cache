@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "aiofiles==22.1.0",
+    "aiofiles==23.1.0",
     "aiohttp[speedups]==3.8.3",
     "celery==5.2.7",
     "certifi==2022.12.7",
