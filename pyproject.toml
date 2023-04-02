@@ -30,7 +30,7 @@ dependencies = [
     "multidict==6.0.4",
     "orjson==3.8.7",
     "python-dotenv==1.0.0",
-    "redis==4.5.1",
+    "redis==4.5.4",
     "requests==2.28.2",
     "sanic-ext==23.3.0",
     "sanic==23.3.0",
