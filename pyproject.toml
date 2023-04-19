@@ -26,7 +26,7 @@ dependencies = [
     "aiohttp[speedups]==3.8.4",
     "celery==5.2.7",
     "certifi==2022.12.7",
-    "diskcache==5.5.1",
+    "diskcache==5.6.1",
     "multidict==6.0.4",
     "orjson==3.8.10",
     "python-dotenv==1.0.0",
