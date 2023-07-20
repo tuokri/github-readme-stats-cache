@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "aiofiles==23.1.0",
-    "aiohttp[speedups]==3.8.4",
+    "aiohttp[speedups]==3.8.5",
     "celery==5.3.1",
     "certifi==2022.12.7",
     "diskcache==5.6.1",
