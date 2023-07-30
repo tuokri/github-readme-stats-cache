@@ -13,7 +13,6 @@ import urllib3
 from celery import Task
 from dotenv import load_dotenv
 
-from cache import CACHE_LOCK
 from cache import DISK_CACHE
 from utils import parse_kv_pairs
 
@@ -31,7 +30,9 @@ app = celery.Celery(
 redis_instance = redis.StrictRedis.from_url(REDIS_URL)
 
 cache = DISK_CACHE
-cache_lock = CACHE_LOCK
+
+
+# cache_lock = CACHE_LOCK
 
 
 class BaseTask(Task):
@@ -63,9 +64,9 @@ def set_redis(key: str, value: bytes, ttl: int):
 def set_cache(key: str, value: bytes):
     # noinspection PyBroadException
     try:
-        with cache_lock:
-            # print(f"set_cache: key={key}")
-            cache.set(key, value)
+        # with cache_lock:
+        # print(f"set_cache: key={key}")
+        cache.set(key, value)
     except Exception:
         print_exc()
 

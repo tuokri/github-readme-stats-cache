@@ -14,7 +14,7 @@ DISK_CACHE = diskcache.FanoutCache(
     shards=4,
 )
 
-CACHE_LOCK = diskcache.RLock(
-    cache=DISK_CACHE,
-    key="rlock",
-)
+# CACHE_LOCK = diskcache.RLock(
+#     cache=DISK_CACHE,
+#     key="rlock",
+# )

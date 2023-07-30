@@ -25,7 +25,7 @@ from sanic import Sanic
 from sanic import redirect
 from sanic.log import logger
 
-from cache import CACHE_LOCK
+# from cache import CACHE_LOCK
 from cache import DISK_CACHE
 from utils import parse_kv_pairs
 from worker import do_vercel_get
@@ -94,12 +94,14 @@ app.config.AUTO_EXTEND = False
 app.config.LOGGING = False
 
 app.ctx.cache = DISK_CACHE
-app.ctx.cache_lock = CACHE_LOCK
+
+
+# app.ctx.cache_lock = CACHE_LOCK
 
 
 def _set_cache(key: str, value: bytes):
-    with app.ctx.cache_lock:
-        app.ctx.cache[key] = value
+    # with app.ctx.cache_lock:
+    app.ctx.cache[key] = value
 
 
 async def set_disk_cache(key: str, value: bytes):
@@ -110,8 +112,8 @@ async def set_disk_cache(key: str, value: bytes):
 def _get_cache(key: str) -> dict:
     data = {}
 
-    with app.ctx.cache_lock:
-        cached = app.ctx.cache.get(key)
+    # with app.ctx.cache_lock:
+    cached = app.ctx.cache.get(key)
 
     if cached:
         data = orjson.loads(cached)
