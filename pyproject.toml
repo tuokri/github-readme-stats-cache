@@ -33,7 +33,7 @@ dependencies = [
     "redis==4.6.0",
     "requests==2.31.0",
     "sanic-ext==23.3.0",
-    "sanic==23.3.0",
+    "sanic==23.6.0",
     "urllib3==2.0.3",
     "uvloop==0.17.0; platform_system != 'Windows'",
 ]
