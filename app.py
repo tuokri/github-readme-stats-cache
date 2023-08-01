@@ -224,6 +224,8 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
                         type(e).__name__, e)
 
     async def _vercel_get(self):
+        logger.info("performing vercel get immediately")
+
         async with app.ctx.aiohttp_session.get(
                 url=self._vercel_route,
                 ssl_context=app.ctx.ssl_context) as resp:
@@ -244,6 +246,8 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
 
         await self._redis_set(json_dump)
         await self._diskcache_set(json_dump)
+
+        logger.info("vercel get results cached")
 
     async def _get(self):
         await self._redis_get()
