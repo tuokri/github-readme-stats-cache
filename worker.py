@@ -71,7 +71,7 @@ def set_cache(key: str, value: bytes):
         print_exc()
 
 
-@app.task(base=BaseTask)
+@app.task(base=BaseTask, ignore_result=True)
 def do_vercel_get(vercel_url: str, vercel_route: str):
     vercel_url_parts = urlparse(vercel_url)
     vercel_route_parts = urlparse(vercel_route)
@@ -124,7 +124,7 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
     set_redis(key, json_dump, ttl)
 
 
-@app.task(base=BaseTask)
+@app.task(base=BaseTask, ignore_result=True)
 def flush_redis():
     if not redis_instance.get(REDIS_FLUSHED_RECENTLY_KEY):
         print("flushing redis")
