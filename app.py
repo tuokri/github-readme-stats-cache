@@ -136,6 +136,8 @@ async def _do_vercel_get(vercel_url: str, vercel_route: str):
     except Exception as e:
         logger.error("failed to schedule Vercel get: %s: %s",
                      type(e).__name__, e)
+    finally:
+        app.purge_tasks()
 
 
 async def _schedule_vercel_get_task(vercel_url: str, vercel_route: str):
