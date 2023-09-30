@@ -350,6 +350,23 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
     return HTTPResponse(status=500)
 
 
+@app.after_server_start
+async def after_server_start(*_):
+    # Pre-warm caches.
+    do_vercel_get(
+        "http://gh-readme-stats-cache.fly.dev",
+        ("/api?username=tuokri&count_private=true&theme=synthwave&"
+         "show_icons=true&include_all_commits=true"),
+    ).delay()
+    do_vercel_get(
+        "http://gh-readme-stats-cache.fly.dev",
+        ("/api/top-langs/?username=tuokri&layout=compact&"
+         "theme=synthwave&langs_count=8&count_private=true&"
+         "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
+         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection"),
+    ).delay()
+
+
 @app.main_process_start
 async def main_process_start(*_):
     from _version import __version__
