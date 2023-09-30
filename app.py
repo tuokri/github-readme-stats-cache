@@ -354,12 +354,12 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
 async def after_server_start(*_):
     # Pre-warm caches.
     do_vercel_get(
-        "http://gh-readme-stats-cache.fly.dev",
+        "https://gh-readme-stats-cache.fly.dev",
         ("/api?username=tuokri&count_private=true&theme=synthwave&"
          "show_icons=true&include_all_commits=true"),
     ).delay()
     do_vercel_get(
-        "http://gh-readme-stats-cache.fly.dev",
+        "https://gh-readme-stats-cache.fly.dev",
         ("/api/top-langs/?username=tuokri&layout=compact&"
          "theme=synthwave&langs_count=8&count_private=true&"
          "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"

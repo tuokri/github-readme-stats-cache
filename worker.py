@@ -11,10 +11,13 @@ import redis
 import requests
 import urllib3
 from celery import Task
+from celery.utils.log import get_task_logger
 from dotenv import load_dotenv
 
 from cache import DISK_CACHE
 from utils import parse_kv_pairs
+
+logger = get_task_logger(__name__)
 
 load_dotenv()
 
@@ -73,6 +76,9 @@ def set_cache(key: str, value: bytes):
 
 @app.task(base=BaseTask, ignore_result=True)
 def do_vercel_get(vercel_url: str, vercel_route: str):
+    logger.info("do_vercel_get: '%s' '%s'",
+                vercel_url, vercel_route)
+
     vercel_url_parts = urlparse(vercel_url)
     vercel_route_parts = urlparse(vercel_route)
     # scheme, netloc, url, params, query, fragment
