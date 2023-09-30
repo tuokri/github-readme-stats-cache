@@ -259,8 +259,11 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
         logger.info("redis cache miss for: '%s'", self._vercel_route)
 
         await self._diskcache_get()
+
+        # Schedule always to refresh cache in the background.
+        await _schedule_vercel_get_task(app.ctx.vercel_url, self._vercel_route)
+
         if self._headers and self._payload:
-            await _schedule_vercel_get_task(app.ctx.vercel_url, self._vercel_route)
             return
 
         logger.info("diskcache miss for '%s'", self._vercel_route)
@@ -352,19 +355,32 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
 
 @app.after_server_start
 async def after_server_start(*_):
+    pass
     # Pre-warm caches.
-    do_vercel_get(
-        "https://gh-readme-stats-cache.fly.dev",
-        ("/api?username=tuokri&count_private=true&theme=synthwave&"
-         "show_icons=true&include_all_commits=true"),
-    ).delay()
-    do_vercel_get(
-        "https://gh-readme-stats-cache.fly.dev",
-        ("/api/top-langs/?username=tuokri&layout=compact&"
-         "theme=synthwave&langs_count=8&count_private=true&"
-         "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
-         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection"),
-    ).delay()
+    # do_vercel_get(
+    #     "https://gh-readme-stats-cache.fly.dev",
+    #     ("/api?username=tuokri&count_private=true&theme=synthwave&"
+    #      "show_icons=true&include_all_commits=true#gh-dark-mode-only"),
+    # ).delay()
+    # do_vercel_get(
+    #     "https://gh-readme-stats-cache.fly.dev",
+    #     ("/api?username=tuokri&count_private=true&theme=synthwave&"
+    #      "show_icons=true&include_all_commits=true#gh-light-mode-only"),
+    # ).delay()
+    # do_vercel_get(
+    #     "https://gh-readme-stats-cache.fly.dev",
+    #     ("/api/top-langs/?username=tuokri&layout=compact&"
+    #      "theme=synthwave&langs_count=8&count_private=true&"
+    #      "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
+    #      "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection#gh-dark-mode-only"),
+    # ).delay()
+    # do_vercel_get(
+    #     "https://gh-readme-stats-cache.fly.dev",
+    #     ("/api/top-langs/?username=tuokri&layout=compact&"
+    #      "theme=synthwave&langs_count=8&count_private=true&"
+    #      "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
+    #      "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection#gh-light-mode-only"),
+    # ).delay()
 
 
 @app.main_process_start
