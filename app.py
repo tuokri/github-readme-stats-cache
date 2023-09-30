@@ -356,7 +356,9 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
 
 
 @app.after_server_start
-async def after_server_start(*_):  # Pre-warm caches.
+async def after_server_start(*_):
+    # Pre-warm caches.
+    # TODO: probably don't want to run this in each worker.
     do_vercel_get.delay(
         VERCEL_URL,
         ("/api?username=tuokri&count_private=true&theme=default&"
