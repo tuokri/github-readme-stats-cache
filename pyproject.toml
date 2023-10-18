@@ -35,7 +35,7 @@ dependencies = [
     "sanic-ext==23.6.0",
     "sanic==23.6.0",
     "urllib3==2.0.6",
-    "uvloop==0.17.0; platform_system != 'Windows'",
+    "uvloop==0.18.0; platform_system != 'Windows'",
 ]
 dynamic = ["version"]
 
