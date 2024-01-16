@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bullseye
+FROM python:3.12-slim-bullseye
 
 ENV PYTHONUNBUFFERED 1
 
@@ -13,11 +13,12 @@ COPY requirements.txt requirements.txt
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
+ARG OVERMIND_VERSION="v2.4.0"
 # --checksum=sha256:d6a715c0810ceb39c94bf61843befebe04a83a0469b53d6af0a52e2fea4e2ab3 \
-ADD https://github.com/DarthSim/overmind/releases/download/v2.3.0/overmind-v2.3.0-linux-amd64.gz \
+ADD https://github.com/DarthSim/overmind/releases/download/${OVERMIND_VERSION}/overmind-${OVERMIND_VERSION}-linux-amd64.gz \
     ./
-RUN gzip -fd ./overmind-v2.3.0-linux-amd64.gz
-RUN mv ./overmind-v2.3.0-linux-amd64 ./overmind
+RUN gzip -fd ./overmind-${OVERMIND_VERSION}-linux-amd64.gz
+RUN mv ./overmind-${OVERMIND_VERSION}-linux-amd64 ./overmind
 RUN chmod +x ./overmind
 RUN mv ./overmind /usr/local/bin/
 
