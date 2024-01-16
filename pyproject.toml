@@ -51,4 +51,4 @@ source = "vcs"
 version-file = "_version.py"
 
 [[tool.hatch.envs.test.matrix]]
-python = ["39", "310", "311"]
+python = ["310", "311", "312"]
