@@ -359,6 +359,7 @@ async def on_exception(request: Request, exc: Exception) -> HTTPResponse:
 async def after_server_start(*_):
     # Pre-warm caches.
     # TODO: probably don't want to run this in each worker.
+    # TODO: hard-coding these is kinda tedious.
     do_vercel_get.delay(
         VERCEL_URL,
         ("/api?username=tuokri&count_private=true&theme=default&"
@@ -372,16 +373,18 @@ async def after_server_start(*_):
     do_vercel_get.delay(
         VERCEL_URL,
         ("/api/top-langs/?username=tuokri&layout=compact&"
-         "theme=default&langs_count=8&count_private=true&"
+         "theme=default&langs_count=10&count_private=true&"
+         "size_weight=0.6&count_weight=0.4&"
          "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
-         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection"),
+         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite"),
     )
     do_vercel_get.delay(
         VERCEL_URL,
         ("/api/top-langs/?username=tuokri&layout=compact&"
-         "theme=synthwave&langs_count=8&count_private=true&"
+         "theme=synthwave&langs_count=10&count_private=true&"
+         "size_weight=0.6&count_weight=0.4&"
          "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
-         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection"),
+         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite"),
     )
 
 
