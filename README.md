@@ -15,5 +15,6 @@ queue (Celery).
 
 ---
 
-TODO: GitHub action to purge camo image cache on deployment to
-refresh statistics badges.
+### Development TODOs
+
+- Replace Celery with taskiq?
