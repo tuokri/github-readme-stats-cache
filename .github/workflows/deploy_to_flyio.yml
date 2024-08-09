@@ -12,8 +12,20 @@ jobs:
     concurrency: deploy-group
     steps:
       - uses: actions/checkout@v4
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install hatch
+
+      - run: |
+          hatch build
+          hatch dep show requirements >requirements.txt
+          flyctl deploy --verbose --push --now
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
