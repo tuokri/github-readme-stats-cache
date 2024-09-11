@@ -158,3 +158,8 @@ venv/**/*
 cache_api.json
 
 .diskcache
+
+# Git
+**/.git
+
+.github/
