@@ -13,8 +13,3 @@ DISK_CACHE = diskcache.FanoutCache(
     size_limit=524288000,  # 500 MiB.
     shards=4,
 )
-
-# CACHE_LOCK = diskcache.RLock(
-#     cache=DISK_CACHE,
-#     key="rlock",
-# )
