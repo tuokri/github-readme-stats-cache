@@ -28,7 +28,7 @@ dependencies = [
     "certifi==2025.1.31",
     "diskcache==5.6.3",
     "multidict==6.2.0",
-    "orjson==3.10.15",
+    "orjson==3.10.16",
     "python-dotenv==1.0.1",
     "redis==5.2.1",
     "requests==2.32.3",
