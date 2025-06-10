@@ -31,7 +31,7 @@ dependencies = [
     "orjson==3.10.18",
     "python-dotenv==1.1.0",
     "redis==5.2.1",
-    "requests==2.32.3",
+    "requests==2.32.4",
     "sanic-ext==24.12.0",
     "sanic==25.3.0",
     "urllib3==2.4.0",
