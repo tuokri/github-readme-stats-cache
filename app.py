@@ -370,7 +370,7 @@ async def after_server_start(*_):
          "theme=default&langs_count=10&count_private=true&"
          "size_weight=0.6&count_weight=0.4&"
          "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
-         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite"),
+         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite,UE3-LibHTTP"),
     )
     do_vercel_get.delay(
         VERCEL_URL,
@@ -378,7 +378,7 @@ async def after_server_start(*_):
          "theme=synthwave&langs_count=10&count_private=true&"
          "size_weight=0.6&count_weight=0.4&"
          "exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,"
-         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite"),
+         "pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite,UE3-LibHTTP"),
     )
 
 
