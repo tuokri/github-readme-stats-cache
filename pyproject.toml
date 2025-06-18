@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "github-readme-stats-cache"
 description = 'Caches GitHub Readme Stats images served by a Vercel app.'
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = "MIT"
 keywords = []
 authors = [
