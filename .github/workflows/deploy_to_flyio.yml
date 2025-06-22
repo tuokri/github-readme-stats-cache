@@ -39,6 +39,6 @@ jobs:
 
   # Try to warm up caches.
   get-readme-page-to-warm-up-cache:
-    - runs-on: ubuntu-latest
-    - steps:
-        - run: curl https://github.com/tuokri/tuokri
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl https://github.com/tuokri/tuokri
