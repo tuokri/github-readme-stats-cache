@@ -39,6 +39,7 @@ jobs:
 
   # Try to warm up caches.
   get-readme-page-to-warm-up-cache:
+    needs: [ purge-profile-readme ]
     runs-on: ubuntu-latest
     steps:
       - run: curl https://github.com/tuokri/tuokri
