@@ -5,12 +5,21 @@ on:
     branches:
       - master
 
+env:
+  REPO_OWNER: tuokri
+
 jobs:
   deploy-to-flyio:
     name: Deploy app
     runs-on: ubuntu-latest
     concurrency: deploy-group
     steps:
+      - name: Check running on repo owner
+        uses: actions/github-script@v7
+        if: ${{ github.repository_owner != env.REPO_OWNER }}
+        with:
+          script: core.setFailed('action is not running on repository owner!')
+
       - uses: actions/checkout@v4
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
@@ -41,6 +50,12 @@ jobs:
     needs: [ purge-profile-readme ]
     runs-on: ubuntu-latest
     steps:
+      - name: Check running on repo owner
+        uses: actions/github-script@v7
+        if: ${{ github.repository_owner != env.REPO_OWNER }}
+        with:
+          script: core.setFailed('action is not running on repository owner!')
+
       - uses: actions/checkout@v4
 
       - name: Setup Python
@@ -48,5 +63,11 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip'
+
+      - run: pip install hatch
+
+      - name: Build with Hatch and write requirements file
+        run: |
+          hatch build
 
       - run: python ./warm_up_caches.py
