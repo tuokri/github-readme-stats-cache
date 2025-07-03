@@ -64,10 +64,6 @@ jobs:
           python-version: '3.13'
           cache: 'pip'
 
-      - run: pip install hatch
-
-      - name: Build with Hatch and write requirements file
-        run: |
-          hatch build
+      - run: pip install -e .
 
       - run: python ./warm_up_caches.py
