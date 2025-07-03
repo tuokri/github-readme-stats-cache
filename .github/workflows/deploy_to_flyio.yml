@@ -26,7 +26,7 @@ jobs:
       - name: Build with Hatch and write requirements file
         run: |
           hatch build
-          hatch dep show requirements >requirements.txt
+          hatch dep show requirements > requirements.txt
 
       - run: |
           flyctl deploy --verbose --remote-only
@@ -37,10 +37,14 @@ jobs:
     needs: [ deploy-to-flyio ]
     uses: ./.github/workflows/purge_profile_readme.yml
 
-  # Try to warm up caches. NOTE: these URLs are duplicated in many places.
   get-readme-page-to-warm-up-cache:
     needs: [ purge-profile-readme ]
     runs-on: ubuntu-latest
     steps:
-      - run: curl https://gh-readme-stats-cache.fly.dev/api?username=tuokri&count_private=true&theme=synthwave&show_icons=true&include_all_commits=true
-      - run: curl https://gh-readme-stats-cache.fly.dev/api/top-langs/?username=tuokri&layout=compact&theme=synthwave&langs_count=10&count_private=true&size_weight=0.6&count_weight=0.4&exclude_repo=github-readme-stats,DPP,mumble,UnrealEngine,pyspellchecker,ftp-tail,SquadJS,CnC_Remastered_Collection,UDK-Lite,UE3-LibHTTP
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - run: python ./warm_up_caches.py
