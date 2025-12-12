@@ -191,7 +191,7 @@ class VercelSession(AbstractAsyncContextManager["VercelSession"]):
                 except ValueError as e:
                     logger.warning(
                         "error parsing cache control headers: %s: %s: %s",
-                        cc, type(ce).__name__, ce)
+                        cc, type(e).__name__, e)
 
             await app.ctx.redis.expire(self._vercel_route, ttl)
 
