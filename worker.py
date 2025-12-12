@@ -122,11 +122,13 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
     ttl = 7500
     cc = headers.get("cache-control")
     if cc:
-        kvs = parse_kv_pairs(cc)
         try:
+            kvs = parse_kv_pairs(cc)
             ttl = int(kvs.get("max-age", 7500))
-        except ValueError:
-            pass
+        except ValueError as e:
+            logger.warning(
+                "error parsing cache control headers: %s: %s: %s",
+                cc, type(ce).__name__, ce)
     set_redis(key, json_dump, ttl)
 
 
