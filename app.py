@@ -85,7 +85,7 @@ class CustomSanic(Sanic):
         self.ctx: AppContext = ctx or AppContext()
 
 
-VERCEL_URL = "https://github-readme-stats-tuokri.vercel.app"
+VERCEL_URL = "https://github-readme-stats-tuokris-projects.vercel.app"
 
 app = CustomSanic(
     name=__name__,
