@@ -34,6 +34,8 @@ load_dotenv()
 
 DISKCACHE_VERSION_KEY = "cache_version"
 
+background_tasks = set()
+
 
 class AppContext(SimpleNamespace):
     def __init__(self, vercel_url: Optional[str] = None, **kwargs):
@@ -128,7 +130,7 @@ async def get_disk_cache(key: str) -> dict:
 async def _do_vercel_get(vercel_url: str, vercel_route: str):
     logger.info("scheduling Vercel get")
     try:
-        do_vercel_get.delay(vercel_url, vercel_route)
+        do_vercel_get.delay(vercel_url=vercel_url, vercel_route=vercel_route)
     except Exception as e:
         logger.error("failed to schedule Vercel get: %s: %s",
                      type(e).__name__, e)
@@ -139,6 +141,8 @@ async def _do_vercel_get(vercel_url: str, vercel_route: str):
 async def _schedule_vercel_get_task(vercel_url: str, vercel_route: str):
     t = app.add_task(_do_vercel_get(vercel_url, vercel_route))
     logger.info("added task %s", t)
+    background_tasks.add(t)
+    t.add_done_callback(background_tasks.discard)
 
 
 class VercelSession(AbstractAsyncContextManager["VercelSession"]):
