@@ -128,7 +128,7 @@ def do_vercel_get(vercel_url: str, vercel_route: str):
         except ValueError as e:
             logger.warning(
                 "error parsing cache control headers: %s: %s: %s",
-                cc, type(ce).__name__, ce)
+                cc, type(e).__name__, e)
     set_redis(key, json_dump, ttl)
 
 
