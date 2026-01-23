@@ -33,7 +33,7 @@ dependencies = [
     "python-dotenv==1.2.1",
     "redis==6.4.0",
     "requests==2.32.5",
-    "sanic-ext==24.12.0",
+    "sanic-ext==25.12.0",
     "sanic==25.12.0",
     "urllib3==2.6.3",
     "uvloop==0.22.1; platform_system != 'Windows'",
