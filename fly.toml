@@ -41,4 +41,4 @@ swap_size_mb = 512
   [[services.tcp_checks]]
     interval = "15s"
     timeout = "2s"
-    grace_period = "1s"
+    grace_period = "3s"
